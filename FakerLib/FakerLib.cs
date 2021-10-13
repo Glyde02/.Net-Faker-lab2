@@ -19,6 +19,24 @@ namespace FakerLib
             this.genericTypeGenerator = new Dictionary<Type, IGenericGenerator>();
 
             this.generatedTypesInClass = new List<Type>();
+
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            Type[] types = assembly.GetTypes();
+            Type basicInterface = typeof(ISimpleTypeGenerator), collectionInterface = typeof(IGenericGenerator);
+
+            for (int i = 0; i < types.Length; i++)
+            {
+
+                if (collectionInterface.IsAssignableFrom(types[i]) && collectionInterface != types[i])
+                {
+                    IGenericGenerator gen = (IGenericGenerator)Activator.CreateInstance(types[i]);
+                    foreach (Type type in gen.CollectionType)
+                    {
+                        genericTypeGenerator.Add(type, gen);
+                    }
+                    
+                }
+            }
         }
 
         public T create<T>()
@@ -41,7 +59,8 @@ namespace FakerLib
             }
             else if (type.IsGenericType && genericTypeGenerator.TryGetValue(type.GetGenericTypeDefinition(), out IGenericGenerator genCreator))
             {
-                createdObject = genCreator.create(type.GenericTypeArguments[0]); //type of object in collection
+                //createdObject = genCreator.Create(type.GenericTypeArguments[0]);
+                createdObject = genCreator.Create(type.GenericTypeArguments[0]);
             }
             else if (type.IsClass && 
                     !type.IsArray && 

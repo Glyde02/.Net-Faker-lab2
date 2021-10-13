@@ -23,6 +23,7 @@ namespace FakerLib
 
 
             add(dict, new IntGenerator());
+            add(dict, new StringGenerator());
 
             return dict;
         }
