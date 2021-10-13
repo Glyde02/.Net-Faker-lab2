@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FakerLib.Types;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,7 +21,15 @@ namespace FakerLib
             //todo
             //add to dictionary simple types
 
+
+            add(dict, new IntGenerator());
+
             return dict;
+        }
+
+        private static void add(Dictionary<Type, ISimpleTypeGenerator> dict, ISimpleTypeGenerator creator)
+        {
+            dict.Add(creator.type, creator);
         }
 
     }

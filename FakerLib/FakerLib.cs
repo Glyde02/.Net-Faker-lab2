@@ -9,28 +9,57 @@ namespace FakerLib
 
         private Dictionary<Type, ISimpleTypeGenerator> simpleTypeGenerator;
         private Dictionary<Type, IGenericGenerator> genericTypeGenerator;
-        private List<Type> GeneratedTypesInClass;
-        
-        
+        private List<Type> generatedTypesInClass;
+        private Dictionary<PropertyInfo, ISimpleTypeGenerator> customSimpleTypeGenerator = new Dictionary<PropertyInfo, ISimpleTypeGenerator>();
+
+
         public Faker()
         {
             this.simpleTypeGenerator = SimpleTypesCreator.getSimpleTypes();
             this.genericTypeGenerator = new Dictionary<Type, IGenericGenerator>();
 
-            this.GeneratedTypesInClass = new List<Type>();
+            this.generatedTypesInClass = new List<Type>();
         }
 
-        object Create(Type type)
+        public T create<T>()
         {
-            object result = null;
-
-            return result;
+            return (T)createObject(typeof(T));
         }
 
-
-        public T Create<T>()
+        private object createObject(Type type)
         {
-            return (T)Create(typeof(T));
+            object createdObject = null;
+
+
+            if (simpleTypeGenerator.TryGetValue(type, out ISimpleTypeGenerator creator))
+            {
+                createdObject = creator.Create();
+            }
+            else if (type.IsValueType)
+            {
+                createdObject = Activator.CreateInstance(type);
+            }
+            else if (type.IsGenericType && genericTypeGenerator.TryGetValue(type.GetGenericTypeDefinition(), out IGenericGenerator genCreator))
+            {
+                createdObject = genCreator.create(type.GenericTypeArguments[0]); //type of object in collection
+            }
+            else if (type.IsClass && 
+                    !type.IsArray && 
+                    !type.IsPointer && 
+                    !type.IsAbstract && 
+                    !type.IsGenericType)
+            {
+                if (!generatedTypesInClass.Contains(type))
+                {
+                    createdObject = createClass(type);
+                }
+                else
+                {
+                    createdObject = null;
+                }
+            }
+
+            return createdObject;
         }
 
         private object createClass(Type type)
@@ -52,7 +81,7 @@ namespace FakerLib
                 }
             }
 
-            GeneratedTypesInClass.Add(type);
+            generatedTypesInClass.Add(type);
 
 
             if (constructor != null)
@@ -61,7 +90,7 @@ namespace FakerLib
             }
 
 
-            GeneratedTypesInClass.Remove(type);
+            generatedTypesInClass.Remove(type);
 
             return createdClass;
         }
@@ -72,12 +101,29 @@ namespace FakerLib
 
             foreach (ParameterInfo parameterInfo in constructor.GetParameters())
             {
-                object value = Create(parameterInfo.ParameterType);
+                object value = null;
+                if (!createByCustomCreator(parameterInfo,type,out value)) {
+                    value = createObject(parameterInfo.ParameterType);
+                }
                 parameters.Add(value);
             }
 
             return constructor.Invoke(parameters.ToArray());
 
+        }
+
+        private bool createByCustomCreator(ParameterInfo parameterInfo, Type type, out object created)
+        {
+            foreach (KeyValuePair<PropertyInfo, ISimpleTypeGenerator> keyValue in customSimpleTypeGenerator)
+            {
+                if (keyValue.Key.Name == parameterInfo.Name && keyValue.Value.type.Equals(parameterInfo.ParameterType) && keyValue.Key.ReflectedType.Equals(type))
+                {
+                    created = keyValue.Value.Create();
+                    return true;
+                }
+            }
+            created = null;
+            return false;
         }
 
 

@@ -1,12 +1,14 @@
 ﻿using System;
+using FakerLib;
 
-namespace Faker
+namespace FakerProgram
 {
     class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Faker faker = new Faker();
+
         }
     }
 }
