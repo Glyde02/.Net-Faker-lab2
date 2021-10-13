@@ -39,6 +39,13 @@ namespace TestFaker
         }
 
         [TestMethod]
+        public void TestCollectionType2()
+        {
+            var testValue = faker.create<List<int>>();
+            Assert.IsInstanceOfType(testValue[0], typeof(int));
+        }
+
+        [TestMethod]
         public void TestClass()
         {
             var testValue = faker.create<Class1>();

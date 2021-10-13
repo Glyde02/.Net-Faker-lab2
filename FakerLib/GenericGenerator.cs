@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FakerLib.Types;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +13,19 @@ namespace FakerLib
         public Type[] CollectionType => new Type[] { typeof(List<>), typeof(IEnumerable<>), typeof(IList<>), typeof(ICollection<>) };
 
         private Dictionary<Type, ISimpleTypeGenerator> primitiveTypeList = new Dictionary<Type, ISimpleTypeGenerator>();
+
+        private static void add(Dictionary<Type, ISimpleTypeGenerator> primitiveTypeList, ISimpleTypeGenerator creator)
+        {
+            primitiveTypeList.Add(creator.type, creator);
+        }
+        public GenericGenerator()
+        {
+            add(primitiveTypeList, new IntGenerator());
+            add(primitiveTypeList, new StringGenerator());
+            add(primitiveTypeList, new CharGenerator());
+            add(primitiveTypeList, new BooleanGenerator());
+            add(primitiveTypeList, new DateGenerator());
+        }
 
         public object Create(Type type)
         {
@@ -27,12 +41,14 @@ namespace FakerLib
             }
             else
             {
-                var defaultValue = "DEFAULT";
+                var defaultValue = "defaultValue";
                 for (int i = 0; i < length; i++)
                 {
                     result.Add(defaultValue);
                 }
             }
+
+
             return result;
         }
     }

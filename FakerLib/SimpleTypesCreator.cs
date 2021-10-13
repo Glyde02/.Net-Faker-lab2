@@ -24,6 +24,9 @@ namespace FakerLib
 
             add(dict, new IntGenerator());
             add(dict, new StringGenerator());
+            add(dict, new CharGenerator());
+            add(dict, new BooleanGenerator());
+            add(dict, new DateGenerator());
 
             return dict;
         }
