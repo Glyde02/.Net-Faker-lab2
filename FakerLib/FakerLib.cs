@@ -10,7 +10,7 @@ namespace FakerLib
         private Dictionary<Type, ISimpleTypeGenerator> simpleTypeGenerator;
         private Dictionary<Type, IGenericGenerator> genericTypeGenerator;
         private List<Type> generatedTypesInClass;
-        private Dictionary<PropertyInfo, ISimpleTypeGenerator> customSimpleTypeGenerator = new Dictionary<PropertyInfo, ISimpleTypeGenerator>();
+        private Dictionary<PropertyInfo, ISimpleTypeGenerator> customTypeGenerator = new Dictionary<PropertyInfo, ISimpleTypeGenerator>();
 
 
         public Faker()
@@ -89,11 +89,58 @@ namespace FakerLib
                 createdClass = CreateFromConstructor(constructor, type);
             }
 
+            createdClass = CreateProperties(type, createdClass);
 
             generatedTypesInClass.Remove(type);
 
             return createdClass;
         }
+
+        private object CreateProperties(Type type, object createdObject)
+        {
+            object created = null;
+            if (createdObject == null)
+            {
+                created = Activator.CreateInstance(type);
+            }
+            else
+            {
+                created = createdObject;
+            }
+
+            foreach (FieldInfo fieldInfo in type.GetFields(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic))
+            {
+                if (fieldInfo.GetValue(created) == null)
+                {
+                    object value = null;
+                    if (!FieldCreator(fieldInfo, out value))
+                    {
+                        value = createObject(fieldInfo.FieldType);
+                    }
+                    fieldInfo.SetValue(created, value);
+                }
+            }
+
+            foreach (PropertyInfo propertyInfo in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.NonPublic))
+            {
+                if (propertyInfo.CanWrite)
+                {
+                    if (propertyInfo.GetValue(created) == null)
+                    {
+                        object value = null;
+                        if (!PropertyCreator(propertyInfo, out value))
+                        {
+                            value = createObject(propertyInfo.PropertyType);
+                        }
+                        propertyInfo.SetValue(created, value);
+                    }
+                }
+            }
+
+            return created;
+        }
+
+
 
         private object CreateFromConstructor(ConstructorInfo constructor, Type type)
         {
@@ -114,7 +161,7 @@ namespace FakerLib
 
         private bool createByCustomCreator(ParameterInfo parameterInfo, Type type, out object created)
         {
-            foreach (KeyValuePair<PropertyInfo, ISimpleTypeGenerator> keyValue in customSimpleTypeGenerator)
+            foreach (KeyValuePair<PropertyInfo, ISimpleTypeGenerator> keyValue in customTypeGenerator)
             {
                 if (keyValue.Key.Name == parameterInfo.Name && keyValue.Value.type.Equals(parameterInfo.ParameterType) && keyValue.Key.ReflectedType.Equals(type))
                 {
@@ -126,7 +173,33 @@ namespace FakerLib
             return false;
         }
 
+        private bool FieldCreator(FieldInfo fieldInfo, out object created)
+        {
+            foreach (KeyValuePair<PropertyInfo, ISimpleTypeGenerator> keyValue in customTypeGenerator)
+            {
+                if (keyValue.Key.Name == fieldInfo.Name && keyValue.Value.type.Equals(fieldInfo.FieldType) && keyValue.Key.ReflectedType.Equals(fieldInfo.ReflectedType))
+                {
+                    created = keyValue.Value.Create();
+                    return true;
+                }
+            }
+            created = null;
+            return false;
+        }
 
+        private bool PropertyCreator(PropertyInfo propertyInfo, out object created)
+        {
+            if (customTypeGenerator.TryGetValue(propertyInfo, out ISimpleTypeGenerator creator))
+            {
+                created = creator.Create();
+                return true;
+            }
+            else
+            {
+                created = null;
+                return false;
+            }
+        }
 
 
     }
